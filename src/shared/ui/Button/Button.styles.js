@@ -42,7 +42,7 @@ const ButtonVariants = {
     }
   `,
   primaryOutlined: css`
-    background-color: ${Colors.White};
+    background-color: ${Colors.Transparent};
     border: 2px solid ${Colors.FluorescentOrange};
 
     &:disabled {

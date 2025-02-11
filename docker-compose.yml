@@ -1,4 +1,4 @@
-version: '2.4'
+version: '3.8'
 
 services:
   postgres:
@@ -7,8 +7,74 @@ services:
       POSTGRES_DB: ${DATABASE_DB_NAME}
       POSTGRES_USER: ${DATABASE_USER}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+    # healthcheck:
+    #   test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER} -d ${DATABASE_DB_NAME}"]
+    #   interval: 5s
+    #   timeout: 5s
+    #   retries: 5
+    #   start_period: 10s
     ports:
       - "5432:5432"
+    networks:
+      - postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  db-init:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: sh /app/scripts/init-db.sh
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_HOST=${DATABASE_HOST}
+      - DATABASE_PORT=${DATABASE_PORT}
+      - DATABASE_USER=${DATABASE_USER}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - DATABASE_DB_NAME=${DATABASE_DB_NAME}
+    volumes:
+      - ./scripts:/app/scripts
+    depends_on:
+      - postgres
+    networks:
+      - postgres
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - nginx-logs:/var/log/nginx
+    depends_on:
+      - nextjs
+    networks:
+      - frontend
+      - postgres
+    restart: unless-stopped
+
+  nextjs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    expose:
+      - "3000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - DATABASE_HOST=${DATABASE_HOST}
+      - DATABASE_PORT=${DATABASE_PORT}
+      - DATABASE_USER=${DATABASE_USER}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - DATABASE_DB_NAME=${DATABASE_DB_NAME}
+    depends_on:
+      - db-init
+    networks:
+      - frontend
+      - postgres
+    restart: unless-stopped
 
   pgadmin:
     image: dpage/pgadmin4:7.2
@@ -20,18 +86,20 @@ services:
       - pgadmin-data:/var/lib/pgadmin
     ports:
       - "5050:80"
+    depends_on:
+      - db-init
+        # condition: service_healthy
     restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 1G
     networks:
       - postgres
 
 volumes:
   pgadmin-data:
+  postgres-data:
+  nginx-logs:
 
 networks:
   postgres:
+    driver: bridge
+  frontend:
     driver: bridge
