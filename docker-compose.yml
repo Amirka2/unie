@@ -1,82 +1,48 @@
 version: '3.8'
 
 services:
-  postgres:
+  db:
+    container_name: postgres
     image: postgres:13.3
     environment:
-      POSTGRES_DB: ${DATABASE_DB_NAME}
-      POSTGRES_USER: ${DATABASE_USER}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
-    # healthcheck:
-    #   test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER} -d ${DATABASE_DB_NAME}"]
-    #   interval: 5s
-    #   timeout: 5s
-    #   retries: 5
-    #   start_period: 10s
+      POSTGRES_DB: unie
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+
     ports:
       - "5432:5432"
-    networks:
-      - postgres
     volumes:
       - postgres-data:/var/lib/postgresql/data
-    restart: unless-stopped
-
-  db-init:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: sh /app/scripts/init-db.sh
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - DATABASE_HOST=${DATABASE_HOST}
-      - DATABASE_PORT=${DATABASE_PORT}
-      - DATABASE_USER=${DATABASE_USER}
-      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
-      - DATABASE_DB_NAME=${DATABASE_DB_NAME}
-    volumes:
-      - ./scripts:/app/scripts
-    depends_on:
-      - postgres
+    restart: always
     networks:
-      - postgres
-
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - nginx-logs:/var/log/nginx
-    depends_on:
-      - nextjs
-    networks:
-      - frontend
-      - postgres
-    restart: unless-stopped
+      - postgres-network
 
   nextjs:
+    container_name: nextjs
     build:
       context: .
       dockerfile: Dockerfile
-    expose:
-      - "3000"
+    ports:
+      - "3000:3000"
     environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - NEXTAUTH_URL=${NEXTAUTH_URL}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-      - DATABASE_HOST=${DATABASE_HOST}
-      - DATABASE_PORT=${DATABASE_PORT}
-      - DATABASE_USER=${DATABASE_USER}
-      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
-      - DATABASE_DB_NAME=${DATABASE_DB_NAME}
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      DATABASE_URL: postgresql://root:root@db:5432/unie
+      DATABASE_HOST: db
+      DATABASE_PORT: 5432
+      DATABASE_USER: root
+      DATABASE_PASSWORD: root
+      DATABASE_DB_NAME: unie
     depends_on:
-      - db-init
-    networks:
-      - frontend
-      - postgres
+      - db
     restart: unless-stopped
+    networks:
+      - postgres-network
+    links:
+      - "db:database"
 
   pgadmin:
+    container_name: pgadmin
     image: dpage/pgadmin4:7.2
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
@@ -87,11 +53,8 @@ services:
     ports:
       - "5050:80"
     depends_on:
-      - db-init
-        # condition: service_healthy
+      - db
     restart: unless-stopped
-    networks:
-      - postgres
 
 volumes:
   pgadmin-data:
@@ -99,7 +62,5 @@ volumes:
   nginx-logs:
 
 networks:
-  postgres:
-    driver: bridge
-  frontend:
+  postgres-network:
     driver: bridge
