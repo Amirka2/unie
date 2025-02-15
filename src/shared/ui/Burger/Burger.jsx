@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import React, { useRef, useState } from "react";
-import { useOnClickOutside } from "usehooks-ts";
+import React, { useState } from "react";
 
 import { ROUTES } from "@core/routes";
+import { useOutsideClick } from "@shared/lib";
 
 import { Portal } from "../Portal";
 import { Menu } from "../Icons";
@@ -15,13 +15,12 @@ const routes = Object.values(ROUTES);
 
 export const Burger = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const ref = useRef(null)
 
   const handleClickOutside = () => {
     setIsOpen(false);
   }
 
-  useOnClickOutside(ref, handleClickOutside);
+  const ref = useOutsideClick(handleClickOutside);
 
   return (
     <>
