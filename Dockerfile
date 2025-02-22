@@ -3,8 +3,13 @@ FROM node:18 AS base
 # Install dependencies only when needed
 FROM base AS deps
 # Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
-# RUN apk add --no-cache libc6-compat
 WORKDIR /app
+
+# Установка необходимых пакетов
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    netcat-traditional \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
@@ -19,9 +24,7 @@ COPY . .
 # disable telemetry during the build.
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# миграция не работает по причине не подключения к серверу postgres
 RUN npx prisma migrate dev --name init
-
 RUN npm run build
 
 # Production image, copy all the files and run next
@@ -50,6 +53,7 @@ FROM node:18
 # Устанавливаем необходимые пакеты
 RUN apt-get update && apt-get install -y \
     postgresql-client \
+    netcat-traditional \
     && rm -rf /var/lib/apt/lists/*
 
 # Устанавливаем рабочую директорию
@@ -68,7 +72,7 @@ COPY . .
 RUN echo '#!/bin/bash\n\
 echo "Waiting for database to be ready..."\n\
 \n\
-while ! pg_isready -h $DATABASE_HOST -p $DATABASE_PORT -U $DATABASE_USER; do\n\
+while ! nc -z $DATABASE_HOST $DATABASE_PORT; do\n\
   echo "Database is not ready - sleeping for 2 seconds"\n\
   sleep 2\n\
 done\n\

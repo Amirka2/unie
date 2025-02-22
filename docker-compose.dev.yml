@@ -1,0 +1,45 @@
+services:
+  postgres:
+    ports:
+      - "${DATABASE_PORT}:5432"  # Открываем порт для доступа извне
+
+  pgadmin:
+    image: dpage/pgadmin4:7.2
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+    ports:
+      - "5050:80"
+    networks:
+      - app_network
+
+  nextjs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: deps  # Останавливаемся на этапе deps для dev
+    volumes:
+      - .:/app  # Монтируем исходный код для hot reload
+      - /app/node_modules
+      - /app/.next
+    command: >
+      sh -c "
+        echo 'Waiting for database...' &&
+        while ! nc -z postgres 5432; do
+          sleep 1
+        done &&
+        echo 'Database is up!' &&
+        npx prisma generate &&
+        npx prisma migrate deploy &&
+        npm run dev
+      "
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_HOST=postgres
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+    networks:
+      - app_network

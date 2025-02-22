@@ -2,38 +2,19 @@ version: '3.8'
 
 services:
   postgres:
-    container_name: postgres_unie
     image: postgres:13.3
     environment:
       POSTGRES_DB: ${DATABASE_NAME}
       POSTGRES_USER: ${DATABASE_USER}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
     ports:
-      - "5432:5432"
-    networks:
-      - app_network
-
-  pgadmin:
-    container_name: pgadmin_unie
-    image: dpage/pgadmin4:7.2
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD: ${DATABASE_PASSWORD}
-      PGADMIN_CONFIG_SERVER_MODE: "False"
+      - "${DATABASE_PORT}:5432"
     volumes:
-      - pgadmin-data:/var/lib/pgadmin
-    ports:
-      - "5050:80"
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 1G
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - app_network
 
   minio:
-    container_name: s3minio_unie
     image: bitnami/minio:latest
     ports:
       - '9000:9000'
@@ -46,48 +27,8 @@ services:
     networks:
       - app_network
 
-  nextjs:
-    container_name: nextjs_unie
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
-    environment:
-      NEXTAUTH_URL: ${NEXTAUTH_URL}
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-      DATABASE_URL: postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@postgres:5432/${DATABASE_NAME}
-      DATABASE_HOST: postgres
-      DATABASE_PORT: 5432
-      DATABASE_USER: ${DATABASE_USER}
-      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
-      DATABASE_NAME: ${DATABASE_NAME}
-    depends_on:
-      - postgres
-    restart: unless-stopped
-    networks:
-      - app_network
-
-  nginx:
-    container_name: nginx
-    build:
-      context: ./nginx
-      dockerfile: Dockerfile
-    volumes:
-      - ./nginx/sites-enabled:/etc/nginx/sites-enabled
-      - ./nginx/logs:/var/log/nginx
-    ports:
-      - 80:80
-      - 443:443
-      - 3000:3000
-    depends_on:
-      - nextjs
-    restart: always
-    networks:
-      - app_network
-
 volumes:
-  pgadmin-data:
+  postgres_data:
   minio_storage:
 
 networks:
