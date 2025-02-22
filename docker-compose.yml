@@ -11,6 +11,14 @@ services:
       - "${DATABASE_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
     networks:
       - app_network
 
@@ -24,12 +32,30 @@ services:
     environment:
       - MINIO_ROOT_USER=${S3_ROOT_USER}
       - MINIO_ROOT_PASSWORD=${S3_ROOT_PASSWORD}
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
     networks:
       - app_network
 
 volumes:
   postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PWD}/docker-data/postgres
+      o: bind
   minio_storage:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PWD}/docker-data/minio
+      o: bind
 
 networks:
   app_network:

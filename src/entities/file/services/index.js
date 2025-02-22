@@ -5,12 +5,13 @@ import { nanoid } from "nanoid";
 import { createPresignedUrlToUpload, createPresignedUrlToDownload } from "@/shared/lib";
 
 import * as fileRepository from "../repositories";
+import { S3_BUCKET_NAME } from "@/core/constants";
 
 const defaultOnUploadSuccess = () => {
   console.log('Success loading files!');
 }
 
-const bucketName = process.env.S3_BUCKET_NAME;
+const bucketName = S3_BUCKET_NAME;
 const expiry = 60 * 60; // 1 час
 
 /** Получение последних 10 загруженных файлов */
@@ -141,7 +142,7 @@ const getFileLinkById = async (id) => {
   const file = await fileRepository.getFileNameById(id);
 
   const presignedUrl = await createPresignedUrlToDownload({
-    bucketName: process.env.S3_BUCKET_NAME,
+    bucketName: S3_BUCKET_NAME,
     fileName: file.fileName
   })
 

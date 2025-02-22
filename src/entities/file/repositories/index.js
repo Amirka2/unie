@@ -1,5 +1,6 @@
 'use server'
 
+import { S3_BUCKET_NAME } from "@/core/constants";
 import { prisma } from "@/shared/lib/db";
 
 const LIMIT_FILES = 10;
@@ -40,7 +41,7 @@ const saveFilesInfo = async (presignedUrls) => {
   }) => {
     return prisma.file.create({
       data: {
-        bucket: process.env.S3_BUCKET_NAME,
+        bucket: S3_BUCKET_NAME,
         fileName: fileNameInBucket,
         originalName,
         size,

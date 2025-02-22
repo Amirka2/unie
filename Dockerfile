@@ -2,7 +2,6 @@ FROM node:18 AS base
 
 # Install dependencies only when needed
 FROM base AS deps
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
 WORKDIR /app
 
 # Установка необходимых пакетов
@@ -18,55 +17,72 @@ RUN npm ci
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
+
+# Добавляем аргументы для сборки
+ARG DATABASE_URL
+ARG DATABASE_HOST
+ARG DATABASE_PORT
+ARG DATABASE_USER
+ARG DATABASE_PASSWORD
+ARG DATABASE_NAME
+
+# Устанавливаем переменные окружения
+ENV DATABASE_URL=${DATABASE_URL}
+ENV DATABASE_HOST=${DATABASE_HOST}
+ENV DATABASE_PORT=${DATABASE_PORT}
+ENV DATABASE_USER=${DATABASE_USER}
+ENV DATABASE_PASSWORD=${DATABASE_PASSWORD}
+ENV DATABASE_NAME=${DATABASE_NAME}
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_OPTIONS="--experimental-json-modules"
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# disable telemetry during the build.
-ENV NEXT_TELEMETRY_DISABLED=1
-
-RUN npx prisma migrate dev --name init
-RUN npm run build
+RUN npx prisma generate
+# TODO удалить флаг
+RUN npm run build --debug
 
 # Production image, copy all the files and run next
 FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
-# disable telemetry during runtime.
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_OPTIONS="--experimental-json-modules"
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+# Добавляем аргументы для production
+ARG DATABASE_URL
+ARG DATABASE_HOST
+ARG DATABASE_PORT
+ARG DATABASE_USER
+ARG DATABASE_PASSWORD
+ARG DATABASE_NAME
 
-COPY --from=builder /app/public ./public
+# Устанавливаем переменные окружения
+ENV DATABASE_URL=${DATABASE_URL}
+ENV DATABASE_HOST=${DATABASE_HOST}
+ENV DATABASE_PORT=${DATABASE_PORT}
+ENV DATABASE_USER=${DATABASE_USER}
+ENV DATABASE_PASSWORD=${DATABASE_PASSWORD}
+ENV DATABASE_NAME=${DATABASE_NAME}
 
-# Automatically leverage output traces to reduce image size
-# https://nextjs.org/docs/advanced-features/output-file-tracing
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-USER nextjs
-
-# Используем Node.js как базовый образ
-FROM node:18
-
-# Устанавливаем необходимые пакеты
 RUN apt-get update && apt-get install -y \
     postgresql-client \
     netcat-traditional \
     && rm -rf /var/lib/apt/lists/*
 
-# Устанавливаем рабочую директорию
-WORKDIR /app
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
 
-# Копируем package.json и package-lock.json
-COPY package*.json ./
-
-# Устанавливаем зависимости
-RUN npm ci
-
-# Копируем все файлы проекта
-COPY . .
+# Копируем необходимые файлы
+COPY --from=builder --chown=nextjs:nodejs /app/next.config.mjs ./
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder /app/prisma ./prisma
 
 # Создаем скрипт для проверки доступности базы данных
 RUN echo '#!/bin/bash\n\
@@ -81,18 +97,14 @@ echo "Database is ready!"\n\
 echo "Running database migrations..."\n\
 npx prisma migrate deploy\n\
 \n\
-echo "Starting build..."\n\
-npm run build\n\
-\n\
 echo "Starting application..."\n\
-exec npm start\n\
+NODE_OPTIONS="--experimental-json-modules" exec node server.js\n\
 ' > /app/wait-for-db.sh
 
-# Делаем скрипт исполняемым
 RUN chmod +x /app/wait-for-db.sh
 
-# Открываем порт
+USER nextjs
+
 EXPOSE 3000
 
-# Запускаем скрипт ожидания базы данных и затем приложение
 CMD ["/app/wait-for-db.sh"]

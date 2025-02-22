@@ -1,0 +1,10 @@
+export const S3_BUCKET_NAME = process.env.S3_BUCKET_NAME ?? "S3_BUCKET_NAME"
+export const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET ?? "NEXTAUTH_SECRET"
+export const MODE = process.env.MODE ?? "development"
+export const S3_ENDPOINT = process.env.S3_ENDPOINT ?? "kubernetes.docker.internal"
+export const S3_PORT = process.env.S3_PORT ? Number(process.env.S3_PORT) : 9000
+export const S3_ACCESS_KEY = process.env.S3_ACCESS_KEY ?? "N9RXVCHLpEZpzoRGUdzO"
+export const S3_SECRET_KEY = process.env.S3_SECRET_KEY ?? "J2vZW4LGzycnwNkXe36D4MrAfTolpCuOZot6wCUd"
+export const S3_ROOT_USER = process.env.S3_ROOT_USER ?? "root-user1Q"
+export const S3_ROOT_PASSWORD = process.env.S3_ROOT_PASSWORD ?? "root-password1Q"
+export const S3_USE_SSL = process.env.S3_USE_SSL ?? false

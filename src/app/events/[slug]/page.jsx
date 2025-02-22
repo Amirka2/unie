@@ -2,6 +2,10 @@ import { eventService, FullInfo } from "@entities/event";
 import { userService } from "@entities/user";
 import { ticketService } from "@entities/ticket";
 
+// Отключаем статическую генерацию для этой страницы
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
 const mapMockImages = (event) => ({
   id: event.id,
   image: "/images/events.jpg",

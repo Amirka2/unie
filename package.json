@@ -2,6 +2,7 @@
   "name": "unie",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
@@ -13,7 +14,9 @@
     "docker:prod:build": "docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d --build",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
-    "docker:clean": "docker compose down -v --remove-orphans"
+    "docker:clean": "docker compose down -v --remove-orphans",
+    "docker:studio": "docker compose exec nextjs npx prisma studio",
+    "docker:studio:dev": "docker compose -f docker-compose.yml -f docker-compose.dev.yml exec nextjs npx prisma studio"
   },
   "dependencies": {
     "@adobe/react-spectrum": "3.39.0",

@@ -1,8 +1,9 @@
+import { MODE } from '@/core/constants';
 import { PrismaClient } from '@prisma/client';
 
 let prisma;
 
-if (process.env.MODE === 'production') {
+if (MODE === 'production') {
     prisma = new PrismaClient();
 } else {
     if (!global.prisma) {

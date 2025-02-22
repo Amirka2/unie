@@ -1,5 +1,12 @@
 'use server'
 
+import {
+  S3_ENDPOINT,
+  S3_PORT,
+  S3_ACCESS_KEY,
+  S3_SECRET_KEY,
+  S3_USE_SSL
+} from '@/core/constants';
 import * as Minio from 'minio'
 
 let s3Client;
@@ -8,11 +15,11 @@ let s3Client;
 export async function initializeS3Client() {
   if (!s3Client) {
     s3Client = new Minio.Client({
-      endPoint: process.env.S3_ENDPOINT,
-      port: process.env.S3_PORT ? Number(process.env.S3_PORT) : undefined,
-      accessKey: process.env.S3_ACCESS_KEY,
-      secretKey: process.env.S3_SECRET_KEY,
-      useSSL: process.env.S3_USE_SSL === 'true',
+      endPoint: S3_ENDPOINT,
+      port: S3_PORT,
+      accessKey: S3_ACCESS_KEY,
+      secretKey: S3_SECRET_KEY,
+      useSSL: S3_USE_SSL,
     });
   }
   return s3Client;
