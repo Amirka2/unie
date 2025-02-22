@@ -4,7 +4,7 @@ services:
   postgres:
     image: postgres:13.3
     environment:
-      POSTGRES_DB: ${DATABASE_DB_NAME}
+      POSTGRES_DB: ${DATABASE_NAME}
       POSTGRES_USER: ${DATABASE_USER}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
     ports:
@@ -40,6 +40,31 @@ services:
     environment:
       - MINIO_ROOT_USER=${S3_ROOT_USER}
       - MINIO_ROOT_PASSWORD=${S3_ROOT_PASSWORD}
+
+  nextjs:
+    container_name: nextjs
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      DATABASE_URL: postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT}/${DATABASE_NAME}
+      DATABASE_HOST: ${DATABASE_HOST}
+      DATABASE_PORT: ${DATABASE_PORT}
+      DATABASE_USER: ${DATABASE_USER}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_NAME: ${DATABASE_NAME}
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - postgres
+    # links:
+    #   - "postgres:database"
+
 
 volumes:
   pgadmin-data:
