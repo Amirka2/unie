@@ -68,6 +68,24 @@ services:
     networks:
       - app_network
 
+  nginx:
+    container_name: nginx
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    volumes:
+      - ./nginx/sites-enabled:/etc/nginx/sites-enabled
+      - ./nginx/logs:/var/log/nginx
+    ports:
+      - 80:80
+      - 443:443
+      - 3000:3000
+    depends_on:
+      - nextjs
+    restart: always
+    networks:
+      - app_network
+
 volumes:
   pgadmin-data:
   minio_storage:

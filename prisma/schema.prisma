@@ -6,6 +6,7 @@ datasource db {
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["clientExtensions"]
+    binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x", "linux-musl-openssl-3.0.x", "rhel-openssl-1.0.x"]
 }
 
 model User {
@@ -68,6 +69,8 @@ model Ticket {
   upload_date DateTime     @default(now())
   image       String?      @db.VarChar(255)
   status      TicketStatus @default(unverified)
+  price       Decimal?     @db.Decimal(10, 2)
+  description String?
 
   user  User  @relation(fields: [user_id], references: [id], onDelete: Cascade)
   event Event @relation(fields: [event_id], references: [id], onDelete: Cascade)
