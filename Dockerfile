@@ -44,11 +44,51 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 USER nextjs
 
+# Используем Node.js как базовый образ
+FROM node:18
+
+# Устанавливаем необходимые пакеты
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Устанавливаем рабочую директорию
+WORKDIR /app
+
+# Копируем package.json и package-lock.json
+COPY package*.json ./
+
+# Устанавливаем зависимости
+RUN npm ci
+
+# Копируем все файлы проекта
+COPY . .
+
+# Создаем скрипт для проверки доступности базы данных
+RUN echo '#!/bin/bash\n\
+echo "Waiting for database to be ready..."\n\
+\n\
+while ! pg_isready -h $DATABASE_HOST -p $DATABASE_PORT -U $DATABASE_USER; do\n\
+  echo "Database is not ready - sleeping for 2 seconds"\n\
+  sleep 2\n\
+done\n\
+\n\
+echo "Database is ready!"\n\
+echo "Running database migrations..."\n\
+npx prisma migrate deploy\n\
+\n\
+echo "Starting build..."\n\
+npm run build\n\
+\n\
+echo "Starting application..."\n\
+exec npm start\n\
+' > /app/wait-for-db.sh
+
+# Делаем скрипт исполняемым
+RUN chmod +x /app/wait-for-db.sh
+
+# Открываем порт
 EXPOSE 3000
 
-ENV PORT=3000
-
-# server.js is created by next build from the standalone output
-# https://nextjs.org/docs/pages/api-reference/config/next-config-js/output
-ENV HOSTNAME="0.0.0.0"
-CMD ["node", "server.js"]
+# Запускаем скрипт ожидания базы данных и затем приложение
+CMD ["/app/wait-for-db.sh"]

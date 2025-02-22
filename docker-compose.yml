@@ -1,7 +1,8 @@
-version: '2.4'
+version: '3.8'
 
 services:
   postgres:
+    container_name: postgres_unie
     image: postgres:13.3
     environment:
       POSTGRES_DB: ${DATABASE_NAME}
@@ -9,8 +10,11 @@ services:
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
     ports:
       - "5432:5432"
+    networks:
+      - app_network
 
   pgadmin:
+    container_name: pgadmin_unie
     image: dpage/pgadmin4:7.2
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
@@ -20,17 +24,16 @@ services:
       - pgadmin-data:/var/lib/pgadmin
     ports:
       - "5050:80"
-    restart: unless-stopped
     deploy:
       resources:
         limits:
           cpus: '0.5'
           memory: 1G
     networks:
-      - postgres
+      - app_network
 
   minio:
-    container_name: s3minio
+    container_name: s3minio_unie
     image: bitnami/minio:latest
     ports:
       - '9000:9000'
@@ -40,9 +43,11 @@ services:
     environment:
       - MINIO_ROOT_USER=${S3_ROOT_USER}
       - MINIO_ROOT_PASSWORD=${S3_ROOT_PASSWORD}
+    networks:
+      - app_network
 
   nextjs:
-    container_name: nextjs
+    container_name: nextjs_unie
     build:
       context: .
       dockerfile: Dockerfile
@@ -51,9 +56,9 @@ services:
     environment:
       NEXTAUTH_URL: ${NEXTAUTH_URL}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-      DATABASE_URL: postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT}/${DATABASE_NAME}
-      DATABASE_HOST: ${DATABASE_HOST}
-      DATABASE_PORT: ${DATABASE_PORT}
+      DATABASE_URL: postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@postgres:5432/${DATABASE_NAME}
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
       DATABASE_USER: ${DATABASE_USER}
       DATABASE_PASSWORD: ${DATABASE_PASSWORD}
       DATABASE_NAME: ${DATABASE_NAME}
@@ -61,15 +66,12 @@ services:
       - postgres
     restart: unless-stopped
     networks:
-      - postgres
-    # links:
-    #   - "postgres:database"
-
+      - app_network
 
 volumes:
   pgadmin-data:
   minio_storage:
 
 networks:
-  postgres:
+  app_network:
     driver: bridge
